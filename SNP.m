@@ -45,7 +45,7 @@
 % %     [Output, mu] = SNP_g(Input, z0, [1:4;1:4], freqs, typeIn2Out, [], typeSmithChar, fnum, 'RL', fnum_Marker, fnum_axis, fnum_save, []);
 % %
 % end
-%% A, 2021-10-14
+%% A, 2021-10-14, test github upload
 
 function [Output, freqsOut, mu] = SNP_g(snpFile, z0, ports, freqs, typeIn2Out, typeStability, typeSmithChar, fnum, fnum_typePlt, fnum_Marker, fnum_axis, fnum_save, fnum_xls, fnum_legend, fnum_subplt)
 Output = [];
