@@ -1,5 +1,5 @@
 %% PA1, 2021-09-13
-%% PA1x, example:
+%% PA1x, 2021-09-15, example:
 % flag_Instr = 0;
 % if flag_Instr
 %     INSTR = Instrument_VNA_SG_SA_NF({'TCPIP0';'TCPIP0';'TCPIP0';'GPIB'},{'10.163.247.23';'10.163.247.117';'10.163.247.43';'8'},{'VNA';'SG';'SA';'NF'});
@@ -45,10 +45,12 @@
 % %     [Output, mu] = SNP_g(Input, z0, [1:4;1:4], freqs, typeIn2Out, [], typeSmithChar, fnum, 'RL', fnum_Marker, fnum_axis, fnum_save, []);
 % %
 % end
+%% A, 2021-10-14
 
-function [Output, mu] = SNP_g(snpFile, z0, ports, freqs, typeIn2Out, typeStability, typeSmithChar, fnum, fnum_typePlt, fnum_Marker, fnum_axis, fnum_save, fnum_xls, fnum_legend, fnum_subplt)
+function [Output, freqsOut, mu] = SNP_g(snpFile, z0, ports, freqs, typeIn2Out, typeStability, typeSmithChar, fnum, fnum_typePlt, fnum_Marker, fnum_axis, fnum_save, fnum_xls, fnum_legend, fnum_subplt)
 Output = [];
 mu = [];
+freqsOut =[];
 
 if ~exist('z0','var')||isempty(z0)
     z0 = 50;
@@ -253,7 +255,7 @@ if flag_fnum && flag_fnum_typePlt && strcmpi(typeIn2Out,'s')
                 end
             end
             %     axis([3.4 3.6 0 -20])
-        case 'phs'
+        case 'PHS'
             for kk=1:size(ports,2)
                 rfplot(snp,ports(1,kk),ports(2,kk),'angle'); hold on; grid on; title('Phase (deg)'),
             end
@@ -306,7 +308,8 @@ if flag_fnum && flag_fnum_typePlt && strcmpi(typeIn2Out,'s')
                     %                     grid on
                     %                     legend
                     xlabel('Frequency(MHz)')
-                    ylabel('Gain.(dB)')
+                    ylabel('Gain(dB)')
+                    title('IL')
                     if flag_fnum_axis
                         axis([fnum_axis(1,1)/1e6 fnum_axis(1,2)/1e6 fnum_axis(1,3) fnum_axis(1,4)])
                     end
@@ -359,7 +362,8 @@ if flag_fnum && flag_fnum_typePlt && strcmpi(typeIn2Out,'s')
                     pltS33 = plot(freqsPlt/1e6, 20*log10(abs(s33(:))),'DisplayName','dB(S33)','LineWidth',1);
                     pltS44 = plot(freqsPlt/1e6, 20*log10(abs(s44(:))),'DisplayName','dB(S44)','LineWidth',1);
                     xlabel('Frequency(MHz)')
-                    ylabel('RL.(dB)')
+                    ylabel('RL(dB)')
+                    title('RL')
                     if flag_fnum_axis
                         axis([fnum_axis(1,1)/1e6 fnum_axis(1,2)/1e6 -30 0])
                     end
@@ -414,7 +418,8 @@ if flag_fnum && flag_fnum_typePlt && strcmpi(typeIn2Out,'s')
                     pltIso1 = plot(freqsPlt/1e6, iso1dB(:),'DisplayName','dB(Iso1)','LineWidth',1);
                     pltIso2 = plot(freqsPlt/1e6, iso2dB(:),'DisplayName','dB(Iso2)','LineWidth',1);
                     xlabel('Frequency(MHz)')
-                    ylabel('Iso.(dB)')
+                    ylabel('ISO(dB)')
+                    title('ISO')
                     if flag_fnum_axis
                         axis([fnum_axis(2,1)/1e6 fnum_axis(2,2)/1e6 fnum_axis(2,3) fnum_axis(2,4)])
                     end
@@ -453,6 +458,7 @@ if flag_fnum && flag_fnum_typePlt && strcmpi(typeIn2Out,'s')
                 % export
                 Output(:,1) = iso1dB(:);
                 Output(:,2) = iso2dB(:);
+                freqsOut = freqsPlt;
             else
                 error('ISO, data input should 4x4!')
             end
@@ -547,7 +553,7 @@ if flag_SmithChar && strcmpi(typeIn2Out,'s')
     end
     title('Smith Chart'),
     for kk=1:size(ports,2)
-        snp_freqs = sparameters(Input,freqslist(ind_f));
+        snp_freqs = sparameters(input,freqslist(ind_f));
         try
             plt_smitchchart = smithplot(snp_freqs,ports(:,kk).','GridType',typeSmithChar); hold on
             plt_smitchchart.LegendLabels(kk) = {['S',num2str(ports(2,kk)),num2str(ports(1,kk)), disp_legend]};
@@ -558,7 +564,7 @@ if flag_SmithChar && strcmpi(typeIn2Out,'s')
                 if 0
                     gamma_L=(ZL1-Z0)/(ZL1+Z0);
                 end
-                gamma_L = snp_freqs.Parameters(kk,kk,ind_Marker);
+                gamma_L = snp_freqs.Parameters(ports(kk),ports(kk),ind_Marker);
                 plt_smitchchart_mk=plot(reshape(real(gamma_L),1,[]),reshape(imag(gamma_L),1,[]),'r>','LineWidth',0.5);
                 plt_smitchchart_mk.MarkerSize = 2;
                 plt_smitchchart_mk.LineWidth = 2;
