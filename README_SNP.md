@@ -33,3 +33,7 @@ output SNP results:
 
   - Smith chart:      
 ![image](https://user-images.githubusercontent.com/87049112/139970476-3ce1bc92-efb5-4afe-b4aa-143fac263419.png)
+
+  - Output:       
+![image](https://user-images.githubusercontent.com/87049112/139970703-64a260ca-325e-4301-98bd-2823d5ce981c.png)
+
