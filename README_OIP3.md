@@ -1,4 +1,4 @@
-OIP3 measurement:
+# OIP3 measurement:
 input SG: 
   - sg_freqC = [3.4e9 3.6e9 3.8e9] % fix freqs
   - sg_freqOfs1 = -1e6 % tone1 offset
@@ -25,6 +25,5 @@ input SA:
 
 ![image](https://user-images.githubusercontent.com/87049112/139814056-2a8f3d7d-ea63-4a38-acae-98bc7c20fcc1.png)
 
-output results:
-
+output results:           
 ![image](https://user-images.githubusercontent.com/87049112/139814690-043daf4e-194f-416b-a451-1d28cd12b191.png)
