@@ -1,5 +1,7 @@
 %% PA1, InstrCtrl, 2021-08-19
 %% PA2, support intrumentL VNA, SG, SA, NF
+%% PA3, 2021-10-13, SG: modify marker
+%% A1, 2021-10-15, export result for all freqs.
 
 classdef Instrument_VNA_SG_SA_NF < handle
     properties
@@ -89,7 +91,7 @@ classdef Instrument_VNA_SG_SA_NF < handle
     end
     
     methods % SG
-        function SG_Init(instr, ports, offset, REFCLK)
+        function SG_Init(instr, ports, offset, REFCLK, ON)
             % open
             SG = instr.SG;
             try
@@ -105,12 +107,32 @@ classdef Instrument_VNA_SG_SA_NF < handle
             if exist('ports','var')&&~isempty(ports)&&exist('offset','var')&&~isempty(offset)
                 Nports = numel(ports);
                 for i = 1: Nports
-                    SetOffset = sprintf('SOURce%d:POWer:%s %d',ports(i),'OFFSET',0+offset(i));
+                    if Nports<numel(offset)
+                        SetOffset = sprintf('SOURce%d:POWer:%s %d',ports(i),'OFFSET',0+offset(ports));
+                    else
+                        SetOffset = sprintf('SOURce%d:POWer:%s %d',ports(i),'OFFSET',0+offset(i));
+                    end
                     fprintf(SG, SetOffset)
                     fprintf(SG, 'SOURce%d:POWer:OFFSET?', ports(i))
                     ofs = str2num(fscanf(SG));
                     SetPwr = sprintf('SOURce%d:POWer:Power %d', ports(i), -30-ofs);
                     fprintf(SG, SetPwr)
+                end
+            end
+            
+            if exist('ON','var')&&~isempty(ON)
+                if iscell(ON)
+                    SetON_1 = cell2mat(ON(1));
+                    if ~isempty(SetON_1)&&strcmp(SetON_1,'ON')
+                        fprintf(SG, 'OUTPut1 ON')
+                    end
+                    
+                    SetON_2 = cell2mat(ON(2));
+                    if ~isempty(SetON_2)&&strcmp(SetON_2,'ON')
+                        fprintf(SG, 'OUTPut2 ON')
+                    end
+                else
+                    error('ON format is cell!')
                 end
             end
             
@@ -286,11 +308,19 @@ classdef Instrument_VNA_SG_SA_NF < handle
                 if isfield(Trigger,'level')
                     fprintf(SA, 'TRIG:SOUR %s',Trigger.source)
                 end
-                fclose(SA);
-                
-                
-                SetBwSwptime = sprintf('SWE:TIME %ds', bwSwpTime);
-                fprintf(SA, SetBwSwptime)
+                if isfield(Trigger,'offset')
+                    fprintf(SA, 'TRIG:HOLD %s',Trigger.offset)
+                end
+                if isfield(Trigger,'slope')
+                    if strcmpi(Trigger.slope, 'Rising')
+                        triggerSlope = 'POS';
+                    elseif strcmpi(Trigger.slope, 'Falling')
+                        triggerSlope = 'NEG';
+                    else
+                        triggerSlope = [];
+                    end
+                    fprintf(SA, 'TRIG:SLOP %s',triggerSlope)
+                end
             end
             
             if nargout>=1
@@ -322,6 +352,14 @@ classdef Instrument_VNA_SG_SA_NF < handle
             fprintf(SA, '*IDN?');
             fscanf(SA);
             XYshfit = 0;
+            
+            %             if ~exist('Amp','var')||isempty(Amp)
+            %                 Amp = [];
+            %             end
+            
+            if ~exist('Freqs','var')||isempty(Freqs)
+                Freqs = [];
+            end
             
             if exist('FUNC','var')&&~isempty(FUNC)
                 if strcmpi(FUNC,'OP1dB')%1 markers
@@ -356,30 +394,53 @@ classdef Instrument_VNA_SG_SA_NF < handle
             % procedure
             Nmarks = numel(Markers);
             for k = 1:Nmarks
-                if isempty(Freqs)
-                    fprintf(SA, 'CALC:MARK:AOFF');
-                    pause(0.2) % 0.2 is experienced setting
-                    fprintf(SA, 'CALC:MARK1 ON');
-                    pause(instr.delay)
-                    SetMarkFreq = sprintf('CALC:MARK%d:X?', 1);
-                elseif isnumeric(Freqs(k))
-                    SetMarkFreq = sprintf('CALC:MARK%d:X %dMHz', Markers(k), Freqs(k));
-                elseif ischar(Freqs(k))
-                    SetMarkFreq = sprintf('CALC:MARK%d:%s', Markers(k), Freqs(k,:));
-                elseif iscell(Freqs(k))
-                    if isnumeric(cell2mat(Freqs(k)))
-                        SetMarkFreq = sprintf('CALC:MARK%d:X %dMHz', Markers(k), cell2mat(Freqs(k)));
-                    elseif ischar(cell2mat(Freqs(k)))
-                        SetMarkFreq = sprintf('CALC:MARK%d:%s', Markers(k), cell2mat(Freqs(k)));
+
+                if ~isempty(Freqs)
+                    if isnumeric(Freqs(k))
+                        SetMark = sprintf('CALC:MARK%d:X %dMHz', Markers(k), Freqs(k));
+                        %                 elseif ischar(Freqs(k))
+                        %                     SetMarkFreq = sprintf('CALC:MARK%d:%s', Markers(k), Freqs(k,:));
+                    elseif ischar(Freqs(k)) %% PA3, 2021-10-23, SG: modify marker
+                        SetMark = sprintf('CALC:MARK%d:X %s', Markers(k), Freqs(k,:));
+                    elseif iscell(Freqs(k))
+                        if isnumeric(cell2mat(Freqs(k)))
+                            SetMark = sprintf('CALC:MARK%d:X %dMHz', Markers(k), cell2mat(Freqs(k)));
+                        elseif ischar(cell2mat(Freqs(k)))
+                            SetMark = sprintf('CALC:MARK%d:%s', Markers(k), cell2mat(Freqs(k)));
+                        end
+                    else
+                        fclose(SA)
+                        error('check Freqs format?')
                     end
                 else
-                    error('check Freqs format?')
+                    %                     fprintf(SA, 'CALC:MARK:AOFF');
+                    %                     pause(0.2) % 0.2 is experienced setting
+                    fprintf(SA, 'CALC:MARK%d OFF', Markers(k));
+                    pause(instr.delay)
+                    fprintf(SA, 'CALC:MARK%d ON', Markers(k));
+                    SetMark = sprintf('CALC:MARK%d:X?', Markers(k));
                 end
-                fprintf(SA, SetMarkFreq);
+                
+                %                 if ~isempty(Amp)
+                %                     if isnumeric(Amp(k))
+                %                         SetMark = sprintf('CALC:MARK%d:Y %s', Markers(k), Amp(k,:));
+                %                     else
+                %                         fclose(SA)
+                %                         error('check Freqs format?')
+                %                     elseif isempty(Freqs) % marker peak search
+                %                         fprintf(SA, 'CALC:MARK:AOFF');
+                %                         pause(0.2) % 0.2 is experienced setting
+                %                         fprintf(SA, 'CALC:MARK1 ON');
+                %                         pause(instr.delay)
+                %                         SetMark = sprintf('CALC:MARK%d:X?', 1);
+                %
+                %                     end
+                %                 end
+                fprintf(SA, SetMark);
                 XY(k,1+XYshfit) = {str2num(fscanf(SA))};
-                dsip_XY(k,1+XYshfit) = {sprintf('Mark%d',k)};
+                dsip_XY(k,1+XYshfit) = {sprintf('Mark%d',Markers(k))};
                 pause(instr.delay)
-                fprintf(SA, 'CALC:MARK%d:Y?', k);
+                fprintf(SA, 'CALC:MARK%d:Y?', Markers(k));
                 XY(k,2+XYshfit) = {str2num(fscanf(SA))};
                 dsip_XY(k,2+XYshfit) = {sprintf('dBm')};
             end
@@ -391,7 +452,7 @@ classdef Instrument_VNA_SG_SA_NF < handle
     
     
     methods % NF
-        function [nf, gain, freqs] = NF_read(instr, MODE, fnum, fnum_marker, fnum_axis, fnum_save)
+        function [nf, gain, freqsMHz] = NF_read(instr, MODE, fnum, fnum_marker, fnum_axis, fnum_save)
             NF = instr.NF;
             try
                 fopen(NF);
@@ -534,7 +595,16 @@ classdef Instrument_VNA_SG_SA_NF < handle
                     fnum_title_cell, fnum_label_cell, fnum_marker/1e6, fnum_axis, fnum_save)
             end
             
-            if flag_fnum_marker % export vs marker
+            if 1 %% A1, 2021-10-15, export result for all freqs.
+%                 nf{1,1} = 'nf dB';
+%                 nf{2,1} = nf;
+%                 gain{1,1} = 'gain dB';
+%                 gain{2,1} = gain;
+                nf = nf(:);
+                gain = gain(:);
+                freqsMHz = freqs(:)./1e6;
+
+            elseif flag_fnum_marker % export vs marker
                 nf = nf_mk;
                 gain = gain_mk;
             end

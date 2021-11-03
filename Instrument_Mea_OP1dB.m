@@ -1,13 +1,14 @@
 %% PA1, 2021-10-02, OP1dB measurement
+
 clear all
 clc
 
-% input: instrument IP
-INSTR = Instrument_VNA_SG_SA_NF({'TCPIP0';'TCPIP0';'TCPIP0'},{'10.163.247.23';'10.163.247.117';'10.163.247.43'},{'VNA';'SG';'SA'});
+%% input: instrument IP
+INSTR = Instrument_VNA_SG_SA_NF({'TCPIP0';'TCPIP0';'TCPIP0'},{'10.163.247.23';'10.163.247.37';'10.163.247.12'},{'VNA';'SG';'SA'});
 
-% input: setup SG
-sg_offset1 = -5.69
-sg_offset2 = -5.6
+%% input: setup SG
+sg_offset1 = -6.0
+sg_offset2 = -6.4
 sg_PoutdBm1 = [-30:1:-10]
 sg_PoutdBm2 = 0
 sg_freqC = [3.4e9 3.6e9 3.8e9]
@@ -17,23 +18,23 @@ sg_freqOfs2 = 2.5e6
 sg_port = [1]
 sg_sigType = 'CW'
 
-% input: setup SA
+%% input: setup SA
 sa_MODE = []
 sa_MEAS = []
 sa_MEASConfig = []
 sa_freqC = mean(sg_freqC)
 sa_freqSpan = 20e6
 sa_ampLevel = 10
-sa_ampLevelOffset = []
+sa_ampLevelOffset = -3.42
 sa_ampRFAtt = 15
 sa_ampPreAmp = []
 sa_bwRBW = 200e3
 sa_bwSwpTime = []
 
-% Initialize SG
+%% Initialize SG
 INSTR.SG_Init(sg_port, [sg_offset1 sg_offset2], 'INTernal');
 
-% Initialize SA
+%% Initialize SA
 INSTR.SA_Init(sa_MODE, sa_MEAS, sa_MEASConfig, ...
     sa_freqC, sa_freqSpan, sa_ampLevel, ...
     sa_ampLevelOffset, sa_ampRFAtt, sa_ampPreAmp,...
@@ -41,6 +42,9 @@ INSTR.SA_Init(sa_MODE, sa_MEAS, sa_MEASConfig, ...
 
 N_freq = length(sg_freqC);
 N_pout = length(sg_PoutdBm1);
+DataOutput = [];
+
+%% OP1dB measurement
 for i=1:N_freq
     sg_freqs = sg_freqC(i)+[0 0];
     shift_i = (i-1)*(N_pout+1);
@@ -108,9 +112,24 @@ for i=1:N_freq
     %     plot(x_plt,y_plt)
 end
 
-% export
+%% export
 DataOutput
 
+x1 = cell2mat(DataOutput(3:23,2));
+y1 = cell2mat(DataOutput(3:23,4));
+freq1MHz = cell2mat(DataOutput(3,1))/1e6;
+x2 = cell2mat(DataOutput(25:45,2));
+y2 = cell2mat(DataOutput(25:45,4));
+freq2MHz = cell2mat(DataOutput(25,1))/1e6;
+x3 = cell2mat(DataOutput(47:67,2));
+y3 = cell2mat(DataOutput(47:67,4));
+freq3MHz = cell2mat(DataOutput(47,1))/1e6;
+
+figure(1014)
+plot(x1, y1, 'DisplayName',[num2str(freq1MHz),'MHz']), hold on, legend
+plot(x2, y2, 'DisplayName',[num2str(freq2MHz),'MHz']), hold on, legend
+plot(x3, y3, 'DisplayName',[num2str(freq3MHz),'MHz']), hold on, legend
+title('IP1dB compression')
 
 % close INSTR
 fclose(INSTR.VNA)

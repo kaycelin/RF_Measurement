@@ -1,41 +1,55 @@
 %% PA1, 2021-10-02, OIP3 measurement
-clear all
+% clear all
 clc
 
-% input: instrument IP
-INSTR = Instrument_VNA_SG_SA_NF({'TCPIP0';'TCPIP0';'TCPIP0'},{'10.163.247.23';'10.163.247.117';'10.163.247.43'},{'VNA';'SG';'SA'},0.1);
+%% input: instrument IP
+INSTR = Instrument_VNA_SG_SA_NF({'TCPIP0';'TCPIP0';'TCPIP0'},{'10.163.247.23';'10.163.247.37';'10.163.247.12'},{'VNA';'SG';'SA'});
 
-% input: setup SG
-sg_offset1 = -5.69
-sg_offset2 = -5.6
-sg_PoutdBm1 = -35+[0 0 0]
-sg_PoutdBm2 = -35+[0 0 0]
-sg_PoutdBm1 = -35+[-1.6 -1.8 -2.6]
-sg_PoutdBm2 = -35+[-1.5 -1.7 -2.6]
+%% input: setup SG
 sg_freqC = [3.4e9 3.6e9 3.8e9]
-sg_freqOfs1 = -2.5e6
-sg_freqOfs2 = 2.5e6
+sg_freqC = [3400:20:3800]*1e6
+sg_freqOfs1 = -1e6
+sg_freqOfs2 = 1e6
+
+sg_offset1 = -6.0
+sg_offset2 = -6.0
+sg_PoutdBm1 = -35
+sg_PoutdBm2 = -35
+flag_offset_comp = 1
+if flag_offset_comp && exist('DataOutput','var')&&~isempty(DataOutput)
+    offset1_comp = -1*cell2mat(DataOutput(3:end,2))
+    offset2_comp = -1*cell2mat(DataOutput(3:end,3))
+    sg_PoutdBm1 = sg_PoutdBm1 + offset1_comp.';
+    sg_PoutdBm2 = sg_PoutdBm2 + offset2_comp.';
+end
+
+% sg_PoutdBm1 = -35+[-1 -1.2 -1.7]
+% sg_PoutdBm2 = -35+[-1.2 -1.2 -1.8]
+if numel(sg_freqC)~=numel(sg_PoutdBm1)
+    sg_PoutdBm1 = mean(sg_PoutdBm1)*ones(1,numel(sg_freqC))
+    sg_PoutdBm2 = mean(sg_PoutdBm2)*ones(1,numel(sg_freqC))
+end
 
 sg_port = [1,2]
 sg_sigType = 'CW'
 
-% input: setup SA
+%% input: setup SA
 sa_MODE = []
 sa_MEAS = []
 sa_MEASConfig = []
 sa_freqC = sg_freqC
 sa_freqSpan = 20e6
 sa_ampLevel = 10
-sa_ampLevelOffset = -1.08
+sa_ampLevelOffset = -3
 sa_ampRFAtt = 15
 sa_ampPreAmp = []
 sa_bwRBW = 200e3
 sa_bwSwpTime = 500e-3;
 
-% Initialize SG
+%% Initialize SG
 INSTR.SG_Init(sg_port, [sg_offset1 sg_offset2], 'INTernal');
 
-% Initialize SA
+%% Initialize SA
 INSTR.SA_Init(sa_MODE, sa_MEAS, sa_MEASConfig, ...
     sa_freqC, sa_freqSpan, sa_ampLevel, ...
     sa_ampLevelOffset, sa_ampRFAtt, sa_ampPreAmp,...
@@ -43,6 +57,9 @@ INSTR.SA_Init(sa_MODE, sa_MEAS, sa_MEASConfig, ...
 
 N_freq = length(sg_freqC);
 N_pout = size(sg_PoutdBm1,1);
+DataOutput = [];
+
+%% OIP3 measurement
 for i=1:N_freq
     sg_freqs = sg_freqC(i)+[sg_freqOfs1 sg_freqOfs2];
     shift_i = i-1;
@@ -121,7 +138,7 @@ for i=1:N_freq
     end
 end
 
-% export
+%% export
 DataOutput
 
 % close INSTR
